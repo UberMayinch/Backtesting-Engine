@@ -158,13 +158,13 @@ class BacktestingEngine:
                            position_size: float):
         """Execute trading logic for a single day."""
         
-        # Get current day data (up to current day for prediction)
-        current_data = test_data.iloc[:day_idx + 1]
+        # Get current day data (up to before current day for prediction)
+        current_data = test_data.iloc[:day_idx-1]
         current_row = test_data.iloc[day_idx]
         
         # Skip if not enough data
-        if len(current_data) < 2:
-            self._record_day_results(day_idx, current_row, 0.0, 0.0)
+        if len(current_data) < 1:
+            self._record_day_results(day_idx, 0.0, 0.0)
             return
         
         # Get prediction from strategy (time this)
@@ -185,11 +185,12 @@ class BacktestingEngine:
             self.inference_times.append(inference_time)
         
         # Calculate position size
+        current_price = current_row['open']
         if position_sizing == 'fixed':
             target_shares = target_position * position_size
         elif position_sizing == 'percentage':
             target_value = self.current_capital * position_size * target_position
-            target_shares = target_value / current_row['close'] if current_row['close'] > 0 else 0.0
+            target_shares = target_value / current_price if current_price > 0 else 0.0
         else:
             target_shares = target_position
         
@@ -216,13 +217,13 @@ class BacktestingEngine:
         self.current_capital += daily_pnl
         
         # Record results
-        self._record_day_results(day_idx, current_row, daily_return, daily_pnl)
+        self._record_day_results(day_idx, daily_return, daily_pnl)
     
     def _execute_trade(self, current_row: pd.Series, position_change: float, day_idx: int) -> float:
         """Execute a trade and calculate transaction costs."""
         
-        # Calculate trade value
-        trade_price = current_row['close'] * (1 + self.slippage * np.sign(position_change))
+        # Calculate trade value (based on open of the current day, not close)
+        trade_price = current_row['open'] * (1 + self.slippage * np.sign(position_change))
         trade_value = abs(position_change * trade_price)
         
         # Calculate transaction costs
@@ -246,7 +247,7 @@ class BacktestingEngine:
         
         return -transaction_cost  # Transaction costs are negative PnL
     
-    def _record_day_results(self, day_idx: int, current_row: pd.Series, 
+    def _record_day_results(self, day_idx: int,
                           daily_return: float, daily_pnl: float):
         """Record daily results."""
         self.daily_returns[day_idx] = daily_return

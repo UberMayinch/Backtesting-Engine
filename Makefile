@@ -32,7 +32,9 @@ sync: ## Sync dependencies (equivalent to install)
 clean: ## Clean up cache and temporary files
 	rm -rf .pytest_cache/
 	rm -rf __pycache__/
+	rm -rf .venv/
 	rm -rf *.egg-info/
+	rm *.png
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 
